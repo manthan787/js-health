@@ -12,8 +12,8 @@ module.exports = {
     help: function() {
         console.log("")
         console.log("downloadDeps OUTPUT")
-        console.log("    Downloads dependencies and devDependencies of all public NPM packages")
-        console.log("    in OUTPUT/dependencies.json")
+        console.log("    Downloads dependencies and devDependencies of latest versions of")
+        console.log("    all public NPM packages in OUTPUT/dependencies.json")
     },
 
     /**
