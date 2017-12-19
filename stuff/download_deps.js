@@ -38,7 +38,7 @@ module.exports = {
         console.log("Getting dependencies for all npm packages")
         let packages = {};
         let count = 0;
-        outdir = process.argv[3]
+        outDir = process.argv[3]
 
         child_process.spawn('curl', [NPM_REGISTRY_URL]).stdout
             .pipe(JSONStream.parse("rows.*"))
