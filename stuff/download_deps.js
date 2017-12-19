@@ -40,7 +40,7 @@ module.exports = {
         let count = 0;
         outDir = process.argv[3]
 
-        child_process.spawn('curl', [NPM_REGISTRY_URL]).stdout
+        child_process.spawn('curl', ["-s", NPM_REGISTRY_URL]).stdout
             .pipe(JSONStream.parse("rows.*"))
             .on("data", (row) => {
                 process.stdout.write("Packages Processed: " + count++ + "\r")
