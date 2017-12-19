@@ -7,6 +7,7 @@ const utils = require("./stuff/utils.js");
 const download_stars = require("./stuff/download_stars.js");
 const test_runner = require("./stuff/test_runner.js");
 const download_all = require("./stuff/download_all.js");
+const download_deps = require("./stuff/download_deps.js");
 const sift = require("./stuff/type_sorter.js");
 
 apiTokens = [
@@ -48,6 +49,7 @@ function help() {
     download_stars.help();
     test_runner.help();
     download_all.help();
+    download_deps.help();
 
     // Add your own actions here
     console.log("")
@@ -67,11 +69,14 @@ function main() {
         case "download":
             download_all.download(apiTokens);
             return;
-	case "downloadTestProjects":
-	    test_runner.downloadTestProjects(apiTokens);
-	case "git_js":
-	    download_all.git_js(apiTokens);
-	    return;
+        case "downloadTestProjects":
+            test_runner.downloadTestProjects(apiTokens);
+        case"downloadDeps":
+            download_deps.download();
+            return;
+        case "git_js":
+            download_all.git_js(apiTokens);
+            return;
         case "topStars":
             download_stars.download(apiTokens);
             break;
@@ -81,8 +86,8 @@ function main() {
         case "runTests":
             test_runner.runTests(false);
             break;
-	case "timeTests":
-	    test_runner.timeTests();
+        case "timeTests":
+            test_runner.timeTests();
         case "help":
             help();
             break;
