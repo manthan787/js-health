@@ -8,7 +8,8 @@ JSONStream  = require('JSONStream'),
 // cache sizes for all packages processed
 let sizeMap = new Map();
 let tarballSizeMap = new Map();
-
+let dependenciesProcessed = 0;
+let manifestFailures = 0;
 /**
  * Get package size for all latest packages on npm
  * `registry` - npm registry path (obtained using `npm run download_npm_registry` command )
@@ -28,18 +29,23 @@ function getNpmPackageSizes(registryPath, outPath) {
             if (reqCount === MAX_REQ) {
                 jsonStream.pause();
             }
-            let size = await getPackageSize({
-                                name: row.value.name,
-                                version: row.value.version,
-                                dependencies: row.value.dependencies || {},
-                                _resolved: row.value.dist.tarball
-                            }, new Set());
+            let package = {
+                            name: row.value.name,
+                            version: row.value.version,
+                            dependencies: row.value.dependencies || {},
+                            _resolved: row.value.dist.tarball
+                          };
+            let packageName = package.name + "@" + package.version;
+            if (sizeMap.has(packageName)) {
+                console.log("^^^size already calculated for " + packageName);
+            }
+            let size = await getPackageSize(package, new Set());
+            outStream.write(row.value.name + "," + row.value.version +  "," + size + "\n", ()=>{});
+            process.stdout.write("Packages Processed: " + count++ + " Dependencies Processed: "+ dependenciesProcessed + " Manifest Error: " + manifestFailures + "\r");
             reqCount--;
             if (reqCount < MAX_REQ) jsonStream.resume();
-            outStream.write(row.value.name + "," + row.value.version +  "," + size + "\n", ()=>{});
-            process.stdout.write("Packages Processed: " + count++ + "\r");
         });
-}
+    }
 
 /**
  * Get package size for an npm package
@@ -49,8 +55,10 @@ function getNpmPackageSizes(registryPath, outPath) {
  * returns size for the package
  */
 async function getPackageSize(package, visited) {
+    // console.log("Processing: " + package.name);
     let packageName = package.name + "@" + package.version;
     if (sizeMap.has(packageName)) {
+        // console.log("***Processing: " + package.name);
         return sizeMap.get(packageName);
     }
     let size = 0;
@@ -58,20 +66,26 @@ async function getPackageSize(package, visited) {
         size = await getTarballSize(package._resolved);
     } catch(e) {}
     for (let dep in package.dependencies) {
-        let depName = dep + "@" + package.dependencies[dep];
+        let version = package.dependencies[dep];
+        let depName = dep + "@" + version
+        if (version.search("git") != -1) {
+            console.log("Git version string " + depName);
+            continue;
+        }
         try {
-            manifest = await pacote.manifest(depName);
             if (! visited.has(depName)) {
                 visited.add(depName);
+                let manifest = await pacote.manifest(depName);
                 size += await getPackageSize(manifest, visited);
             }
         }
         catch(e) {
-            console.log("WARNING: Couldn't find manifest for " + depName + ' ' + e);
-            size += 0
+            console.log("WARNING: Couldn't find manifest for " + depName + ' ' + e + ' ' + packageName);
+            manifestFailures++;
         }
     }
     // console.log("Done processing " + packageName + " ==>  size : " + size);
+    dependenciesProcessed++;
     sizeMap.set(packageName, size);
     return size;
 }
@@ -115,6 +129,7 @@ async function getTarballSize(url, attempt = 0, maxAttempts = 3) {
                     console.log("\n Retrying... " + url + " Attempt : " + attempt);
                     await sleep(2000);
                     let size = await getTarballSize(url, attempt = attempt + 1);
+                    console.log("Resolved " + url + " with size " + size);
                     resolve(size);
                 } else {
                     reject(new Error("Failed request after multiple attempts"));
@@ -136,5 +151,4 @@ function sleep (timeout) {
 }
 
 getNpmPackageSizes("../npm-registry.json", "package_sizes.csv");
-
 module.exports = getNpmPackageSizes
