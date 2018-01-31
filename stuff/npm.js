@@ -40,11 +40,11 @@ function getNpmPackageSizes(registryPath, outPath) {
                 console.log("^^^size already calculated for " + packageName);
             }
             let size = await getPackageSize(package, new Set());
-            outStream.write(row.value.name + "," + row.value.version +  "," + size + "\n", ()=>{});
+            outStream.write(packageName + "," + size.size + "," + size.dependencies + "," + size.dependencyFailures + "\n");
             process.stdout.write("Packages Processed: " + count++ + " Dependencies Processed: "+ dependenciesProcessed + " Manifest Error: " + manifestFailures + "\r");
             reqCount--;
             if (reqCount < MAX_REQ) jsonStream.resume();
-        });
+        })
     }
 
 /**
@@ -56,6 +56,8 @@ function getNpmPackageSizes(registryPath, outPath) {
  */
 async function getPackageSize(package, visited) {
     // console.log("Processing: " + package.name);
+    let packageDependencies = 0;
+    let packageDependencyFailures = 0;
     let packageName = package.name + "@" + package.version;
     if (sizeMap.has(packageName)) {
         // console.log("***Processing: " + package.name);
@@ -74,20 +76,29 @@ async function getPackageSize(package, visited) {
         }
         try {
             if (! visited.has(depName)) {
+                packageDependencies++;
                 visited.add(depName);
                 let manifest = await pacote.manifest(depName);
-                size += await getPackageSize(manifest, visited);
+                let sizeObj = await getPackageSize(manifest, visited);
+                size += sizeObj.size;
+                packageDependencies += sizeObj.dependencies;
+                packageDependencyFailures += sizeObj.dependencyFailures;
             }
         }
         catch(e) {
             console.log("WARNING: Couldn't find manifest for " + depName + ' ' + e + ' ' + packageName);
             manifestFailures++;
+            packageDependencyFailures++;
         }
     }
     // console.log("Done processing " + packageName + " ==>  size : " + size);
     dependenciesProcessed++;
-    sizeMap.set(packageName, size);
-    return size;
+    let sizeRes = {  size:size,
+                     dependencies: packageDependencies,
+                     dependencyFailures: packageDependencyFailures
+                  };
+    sizeMap.set(packageName, sizeRes);
+    return sizeRes;
 }
 
 /**
