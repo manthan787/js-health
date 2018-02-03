@@ -70,9 +70,6 @@ async function getPackageSize(package, visited, level=0) {
                 visited.add(depName);
                 let manifest = await pacote.manifest(depName, {cache: ".pacote.cache"});
                 let depSize = await getPackageSize(manifest, visited, level + 1);
-                if (depSize === undefined) {
-                    console.log("Size undef " + depName);
-                }
                 size += depSize || 0;
             }
         }
