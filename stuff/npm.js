@@ -143,10 +143,10 @@ function sleep (timeout) {
   })
 }
 
-// getNpmPackageSizes("../npm-registry.json", "package_sizes.csv");
-let man = pacote.manifest("apiconnect@2.7.62").then((pkg) => {
-    // console.log(pkg);
-    getPackageSize(pkg, new Set()).then((size) => console.log(size / 1e6));
-});
-getPackageSize()
+getNpmPackageSizes("../npm-registry.json", "package_sizes.csv");
+// let man = pacote.manifest("apiconnect@2.7.62").then((pkg) => {
+//     // console.log(pkg);
+//     getPackageSize(pkg, new Set()).then((size) => console.log(size / 1e6));
+// });
+// getPackageSize()
 module.exports = getNpmPackageSizes
