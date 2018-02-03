@@ -36,9 +36,6 @@ function getNpmPackageSizes(registryPath, outPath) {
                             _resolved: row.value.dist.tarball
                           };
             let packageName = package.name + "@" + package.version;
-            if (sizeMap.has(packageName)) {
-                console.log("^^^size already calculated for " + packageName);
-            }
             let size = await getPackageSize(package, new Set());
             outStream.write(packageName + "," + size.size + "," + size.dependencies + "," + size.dependencyFailures + "\n");
             process.stdout.write("Packages Processed: " + count++ + " Dependencies Processed: "+ dependenciesProcessed + " Manifest Error: " + manifestFailures + "\r");
@@ -54,15 +51,9 @@ function getNpmPackageSizes(registryPath, outPath) {
  *           avoid cycles
  * returns size for the package
  */
-async function getPackageSize(package, visited) {
-    // console.log("Processing: " + package.name);
-    let packageDependencies = 0;
-    let packageDependencyFailures = 0;
+async function getPackageSize(package, visited, level=0) {
     let packageName = package.name + "@" + package.version;
-    if (sizeMap.has(packageName)) {
-        // console.log("***Processing: " + package.name);
-        return sizeMap.get(packageName);
-    }
+    visited.add(packageName);
     let size = 0;
     try {
         size = await getTarballSize(package._resolved);
@@ -76,29 +67,20 @@ async function getPackageSize(package, visited) {
         }
         try {
             if (! visited.has(depName)) {
-                packageDependencies++;
                 visited.add(depName);
-                let manifest = await pacote.manifest(depName);
-                let sizeObj = await getPackageSize(manifest, visited);
-                size += sizeObj.size;
-                packageDependencies += sizeObj.dependencies;
-                packageDependencyFailures += sizeObj.dependencyFailures;
+                let manifest = await pacote.manifest(depName, {cache: ".pacote.cache"});
+                let depSize = await getPackageSize(manifest, visited, level + 1);
+                if (depSize === undefined) {
+                    console.log("Size undef " + depName);
+                }
+                size += depSize || 0;
             }
         }
         catch(e) {
             console.log("WARNING: Couldn't find manifest for " + depName + ' ' + e + ' ' + packageName);
-            manifestFailures++;
-            packageDependencyFailures++;
         }
     }
-    // console.log("Done processing " + packageName + " ==>  size : " + size);
-    dependenciesProcessed++;
-    let sizeRes = {  size:size,
-                     dependencies: packageDependencies,
-                     dependencyFailures: packageDependencyFailures
-                  };
-    sizeMap.set(packageName, sizeRes);
-    return sizeRes;
+    return size;
 }
 
 /**
@@ -161,5 +143,10 @@ function sleep (timeout) {
   })
 }
 
-getNpmPackageSizes("../npm-registry.json", "package_sizes.csv");
+// getNpmPackageSizes("../npm-registry.json", "package_sizes.csv");
+let man = pacote.manifest("apiconnect@2.7.62").then((pkg) => {
+    // console.log(pkg);
+    getPackageSize(pkg, new Set()).then((size) => console.log(size / 1e6));
+});
+getPackageSize()
 module.exports = getNpmPackageSizes
