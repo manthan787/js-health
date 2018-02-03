@@ -6,7 +6,6 @@ JSONStream  = require('JSONStream'),
       URL   = require('url').URL;
 
 // cache sizes for all packages processed
-let sizeMap = new Map();
 let tarballSizeMap = new Map();
 let dependenciesProcessed = 0;
 let manifestFailures = 0;
