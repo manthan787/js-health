@@ -37,11 +37,11 @@ function getNpmPackageSizes(registryPath, outPath) {
                           };
             let packageName = package.name + "@" + package.version;
             let size = await getPackageSize(package, new Set());
-            outStream.write(packageName + "," + size.size + "," + size.dependencies + "," + size.dependencyFailures + "\n");
+            outStream.write(packageName + "," + size "\n");
             process.stdout.write("Packages Processed: " + count++ + " Dependencies Processed: "+ dependenciesProcessed + " Manifest Error: " + manifestFailures + "\r");
             reqCount--;
             if (reqCount < MAX_REQ) jsonStream.resume();
-        })
+        });
     }
 
 /**
