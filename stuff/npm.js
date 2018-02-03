@@ -37,7 +37,7 @@ function getNpmPackageSizes(registryPath, outPath) {
                           };
             let packageName = package.name + "@" + package.version;
             let size = await getPackageSize(package, new Set());
-            outStream.write(packageName + "," + size "\n");
+            outStream.write(packageName + "," + size + "\n");
             process.stdout.write("Packages Processed: " + count++ + " Dependencies Processed: "+ dependenciesProcessed + " Manifest Error: " + manifestFailures + "\r");
             reqCount--;
             if (reqCount < MAX_REQ) jsonStream.resume();
@@ -71,10 +71,12 @@ async function getPackageSize(package, visited, level=0) {
                 let manifest = await pacote.manifest(depName, {cache: ".pacote.cache"});
                 let depSize = await getPackageSize(manifest, visited, level + 1);
                 size += depSize || 0;
+                dependenciesProcessed++;
             }
         }
         catch(e) {
             console.log("WARNING: Couldn't find manifest for " + depName + ' ' + e + ' ' + packageName);
+            manifestFailures++;
         }
     }
     return size;
