@@ -3,12 +3,14 @@ const pacote = require('pacote'),
       zlib  = require('zlib'),
       fs    = require('fs'),
 JSONStream  = require('JSONStream'),
-      URL   = require('url').URL;
+      URL   = require('url').URL,
+   Hashcode = require('hashcode').hashCode;
 
 // cache sizes for all packages processed
 let tarballSizeMap = new Map();
 let dependenciesProcessed = 0;
 let manifestFailures = 0;
+
 /**
  * Get package size for all latest packages on npm
  * `registry` - npm registry path (obtained using `npm run download_npm_registry` command )
@@ -52,7 +54,7 @@ function getNpmPackageSizes(registryPath, outPath) {
  */
 async function getPackageSize(package, visited, level=0) {
     let packageName = package.name + "@" + package.version;
-    visited.add(packageName);
+    visited.add(Hashcode().value(packageName));
     let size = 0;
     try {
         size = await getTarballSize(package._resolved);
@@ -65,8 +67,9 @@ async function getPackageSize(package, visited, level=0) {
             continue;
         }
         try {
-            if (! visited.has(depName)) {
-                visited.add(depName);
+            let depHash = Hashcode().value(depName);
+            if (! visited.has(depHash)) {
+                visited.add(depHash);
                 let manifest = await pacote.manifest(depName, {cache: ".pacote.cache"});
                 let depSize = await getPackageSize(manifest, visited, level + 1);
                 size += depSize || 0;
@@ -89,8 +92,9 @@ async function getPackageSize(package, visited, level=0) {
  *               before giving up.
  */
 async function getTarballSize(url, attempt = 0, maxAttempts = 3) {
-    if (tarballSizeMap.has(url)) {
-        return tarballSizeMap.get(url);
+    let urlHashCode = Hashcode().value(url);
+    if (tarballSizeMap.has(urlHashCode)) {
+        return tarballSizeMap.get(urlHashCode);
     }
     url = new URL(url);
     const options = {host: url.hostname,
@@ -106,7 +110,7 @@ async function getTarballSize(url, attempt = 0, maxAttempts = 3) {
             });
 
             gunzip.on('end', () => {
-                tarballSizeMap.set(url.href, size);
+                tarballSizeMap.set(Hashcode().value(url.href), size);
                 resolve(size);
             });
 
